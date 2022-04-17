@@ -13,7 +13,9 @@ pacman::p_load(tidyverse,roxygen2)
 
 customer_segmentation <- function(df,group,dim,a=.7,b=.26,c=.04){
   
+
   
+  stopifnot(a+b+c==1L,!is.numeric(dim_name))
   
   
   
@@ -60,4 +62,6 @@ customer_segmentation <- function(df,group,dim,a=.7,b=.26,c=.04){
   
 }
 
-reprex()
+diamonds %>% customer_segmentation(group = clarity,dim=x)
+
+roxygenise()
