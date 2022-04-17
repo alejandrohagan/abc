@@ -4,7 +4,7 @@ pacman::p_load(tidyverse,roxygen2)
 #this is a test
 #and this is a test from github
 ## another test
-
+## this is the final test to see if I can get this to work 8:13 am
 #` creates a customer segmentation
 #`
 #` @param df is a dataframe or tibble
