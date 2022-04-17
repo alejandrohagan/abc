@@ -69,9 +69,4 @@ diamonds %>% customer_segmentation(group = clarity,dim=x)
 
 roxygenise()
 
-
-install.packages("usethis")
-usethis::use_git_config(user="alejandrohagan")
-git config --global user.email "alejandro.hagan@exxonmobil.com"
-git config --global user.name "alejandrohagan"
-use_git_config(user.name = "alejandrohagan", user.email = "alejandro.hagan@exxonmobil.com")
+usethis::use_git_config(user.name = "alejandrohagan",user.email = "alejandro.hagan@exxonmobil.com")
