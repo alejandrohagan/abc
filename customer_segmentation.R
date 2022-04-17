@@ -1,6 +1,9 @@
 pacman::p_load(tidyverse,roxygen2)
 
 
+#this is a test
+
+
 #` creates a customer segmentation
 #`
 #` @param df is a dataframe or tibble
@@ -65,3 +68,10 @@ customer_segmentation <- function(df,group,dim,a=.7,b=.26,c=.04){
 diamonds %>% customer_segmentation(group = clarity,dim=x)
 
 roxygenise()
+
+
+install.packages("usethis")
+usethis::use_git_config(user="alejandrohagan")
+git config --global user.email "alejandro.hagan@exxonmobil.com"
+git config --global user.name "alejandrohagan"
+use_git_config(user.name = "alejandrohagan", user.email = "alejandro.hagan@exxonmobil.com")
