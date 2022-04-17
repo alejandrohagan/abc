@@ -1,0 +1,796 @@
+---
+title: "Useful Business functions"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse,roxygen2,scales,glue,dtplyr)
+theme_set(theme(axis.text = element_text(color="black")))
+install.packages("reprex")
+library(reprex)
+
+```
+
+
+
+
+```{r}
+#example data
+contoso <- readxl::read_excel("Contoso.xlsx",col_names = TRUE)
+contoso <- contoso %>% select(-c(contains("DateKey")))
+contoso <- janitor::clean_names(contoso)
+contoso <- contoso %>% 
+  mutate(gross_sale_amount=quantity*unit_price,
+           net_sale_amount=quantity*net_price,
+           cost_amount=quantity*unit_cost,
+           margin=net_sale_amount-cost_amount)
+```
+
+
+
+
+```{r}
+dput(diamonds)
+  
+install.packages("SciencesPo")
+
+library(SciencesPo)
+```
+
+
+
+
+```{r}
+#` creates a customer segmentation
+#`
+#` @param df is a dataframe or tibble
+#` @param group is the grouping key that you want to aggregate the data by, eg customer, plant, product
+#` @param dim is the dimension you want to measure, eg. quantity, margin, etc. This should not be a ratio and should be a positive number
+#` @param a is the initial threshold for aggregation and should be expressed as a percentage
+#` @param b is the incremental threshold for aggregation and should be expressed as a percentage
+#` @param c is the incremental threshold for aggregation and should be expressed as a percentage
+#` @export
+
+customer_segmentation <- function(df,group,dim,a=.7,b=.26,c=.04){
+
+  
+  
+  
+  
+  df %>% #dataframe
+    group_by({{group}}) %>% 
+
+    #creates a bunch of columns
+    summarize(  
+      across({{ dim }}, #make sure this dimension can be aggregratad, later version will handle ratios
+             list(sum=~sum(.,na.rm=TRUE),
+                  mean=~mean(.,na.rm=TRUE),
+                  n =  ~ n(),
+                  median =  ~ median(.,na.rm=TRUE),
+                  sd =  ~ sd(.,na.rm=TRUE),
+                  mad =  ~ mad(.,na.rm=TRUE), #median absolute deviation
+                  aad =  ~ mad(., center =mean(.,na.rm=TRUE),na.rm=TRUE), #average absolute deviation
+                  IQR05 = ~quantile(., .05,na.rm=TRUE),
+                  IQR25 = ~quantile(., .25,na.rm=TRUE),
+                  IQR75 = ~quantile(., .75,na.rm=TRUE),
+                  IQR95 = ~quantile(., .95,na.rm=TRUE)
+                  ),
+             .names = "{.fn}") #gives each column their name
+    ) %>%
+    ungroup() %>% 
+
+    arrange(desc(sum)) %>% # assuming positive values, descends highest to lowest (should add some logic to switch this)
+    
+    mutate(cum_sum=cumsum(sum), #cumlative value, if ratio, need some sort of check - need specify
+         prop_total=sum/max(cum_sum), #assumes positive values, need check
+         cum_prop_total=cumsum(prop_total), #cumsum percent of total
+         cum_unit_prop=row_number()/max(row_number()), #unit percent
+         group_classification_by_dim=
+           case_when(
+           cum_prop_total<=a ~"A",
+           cum_prop_total<=(a+b) ~"B",
+           TRUE ~ "C"),
+         dim_threshold=
+           case_when(group_classification_by_dim=="A"~a,
+                     group_classification_by_dim=="B"~(a+b),
+                     TRUE ~ c)
+         ) %>% 
+    select(-c(prop_total,cum_sum)) %>% 
+    relocate(dim_threshold,group_classification_by_dim,cum_prop_total,cum_unit_prop)
+
+}
+
+reprex()
+```
+```{r}
+
+
+#' Title
+#'
+#' @param df 
+#' @param group 
+#' @param dim 
+#' @param a 
+#' @param b 
+#' @param c 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+customer_segmentation <- function(df,group,dim,a=.7,b=.26,c=.04)
+  
+  
+  
+  {
+  
+  if(a+b+c!=1){
+    
+   stop("a+b+c must equal 1")
+    
+  } else {
+  
+  
+  
+  
+  df %>% #dataframe
+    group_by({{group}}) %>% 
+
+    #creates a bunch of columns
+    summarize(  
+      across({{ dim }}, #make sure this dimension can be aggregratad, later version will handle ratios
+             list(sum=~sum(.,na.rm=TRUE),
+                  mean=~mean(.,na.rm=TRUE),
+                  n =  ~ n(),
+                  median =  ~ median(.,na.rm=TRUE),
+                  sd =  ~ sd(.,na.rm=TRUE),
+                  mad =  ~ mad(.,na.rm=TRUE), #median absolute deviation
+                  aad =  ~ mad(., center =mean(.,na.rm=TRUE),na.rm=TRUE), #average absolute deviation
+                  IQR05 = ~quantile(., .05,na.rm=TRUE),
+                  IQR25 = ~quantile(., .25,na.rm=TRUE),
+                  IQR75 = ~quantile(., .75,na.rm=TRUE),
+                  IQR95 = ~quantile(., .95,na.rm=TRUE)
+                  ),
+             .names = "{.fn}") #gives each column their name
+    ) %>%
+    ungroup() %>% 
+
+    arrange(desc(sum)) %>% # assuming positive values, descends highest to lowest (should add some logic to switch this)
+    
+    mutate(cum_sum=cumsum(sum), #cumlative value, if ratio, need some sort of check - need specify
+         prop_total=sum/max(cum_sum), #assumes positive values, need check
+         cum_prop_total=cumsum(prop_total), #cumsum percent of total
+         cum_unit_prop=row_number()/max(row_number()), #unit percent
+         group_classification_by_dim=
+           case_when(
+           cum_prop_total<=a ~"A",
+           cum_prop_total<=(a+b) ~"B",
+           TRUE ~ "C"),
+         dim_threshold=
+           case_when(group_classification_by_dim=="A"~a,
+                     group_classification_by_dim=="B"~(a+b),
+                     TRUE ~ c)
+         ) %>% 
+    select(-c(prop_total,cum_sum)) %>% 
+    relocate(dim_threshold,group_classification_by_dim,cum_prop_total,cum_unit_prop)
+
+}
+
+
+```
+
+```{r count_plus}
+
+#count_plus function
+
+
+
+count_plus <- function(df,dim,sort=TRUE,...){
+
+
+df %>% count({{dim}},sort=sort,...) %>% 
+  mutate(prop_total=round(cumsum(n/max(cumsum(n))),digits=3),
+         unit_prop=round(row_number()/max(row_number()),digits=3),
+         row_number=row_number()
+         )
+
+}
+
+
+contoso %>% count_plus(customer_key,wt=margin)
+
+```
+
+
+
+
+
+
+
+
+```{r}
+
+abc_coord <- function(df){
+
+#create coordinates table----------------------------------------------------------------
+df %>% 
+  group_by(group_classification_by_dim) %>% 
+  summarize(dim_classification_threshold=
+              as.numeric(
+                round(
+                  last(cum_prop_total),
+                  digits = 2)
+                ),
+            cum_by_threshold=
+              round(
+                last(cum_unit_prop),
+                digits = 2),
+            n_by=n(),
+            plot_cum_dim_prop_total=
+              round(first(cum_prop_total),
+                    digits = 2),
+            plot_cum_by_prop=
+              round(first(cum_unit_prop),
+                    digits=2),
+            ) %>% 
+  ungroup() %>% 
+    mutate(incr_by_threshold=
+             round(
+      if_else(
+        is.na(
+          lag(cum_by_threshold,n = 1)),
+        cum_by_threshold,
+        cum_by_threshold-lag(cum_by_threshold,n = 1)
+        ),
+      digits=2))%>% 
+    relocate(group_classification_by_dim,
+             dim_classification_threshold,
+             cum_by_threshold,
+             incr_by_threshold,
+             n_by)
+}
+
+```
+
+
+
+```{r}
+#create chart-------
+
+abc_graph <- function(df,group_label,dim_label,size,shape,...){
+
+abc_coordinates <- df %>% 
+  group_by(group_classification_by_dim) %>% 
+  summarize(first_cum_per_of_total=first(cum_prop_total),
+            last_cum_per_of_total=last(cum_prop_total),
+            first_cum_unit_percent=first(cum_unit_prop),
+            last_cum_unit_percent=last(cum_unit_prop),
+            n=n(),
+            threshold=first(dim_threshold)
+            )
+
+
+ df %>% 
+  ggplot(aes(x=cum_unit_prop,
+             y=cum_prop_total))+
+  geom_point()+
+  geom_line()+
+  annotate(geom = "rect",
+           xmin = abc_coordinates$first_cum_unit_percent,
+           xmax = abc_coordinates$last_cum_unit_percent,
+           ymin = abc_coordinates$first_cum_per_of_total,
+           ymax= abc_coordinates$last_cum_per_of_total,
+           alpha=.3,
+           fill=c("#007e2f","#ffcd12","#a40000")
+           )+
+  
+#A dotted line---------------------------------------------------------------------------
+  
+  geom_vline(xintercept = abc_coordinates$last_cum_unit_percent[1], 
+             linetype="dashed",
+             col="#007e2f")+
+#B dotted line--------------------------------------------------------------------------
+  
+  geom_vline(xintercept = abc_coordinates$last_cum_unit_percent[2],
+             linetype="dashed",
+             col="#ffcd12")+
+  
+# C dotted line, I think i take this out???------------------------------------------------------------------------
+
+  geom_vline(xintercept = abc_coordinates$last_cum_unit_percent[3], 
+             linetype="dashed",
+             col="#a40000")+
+
+# A text -----------------------------------------------------------------------------
+
+  annotate(geom="text", 
+           label=
+             glue::glue(
+               "initial {scales::percent(abc_coordinates$last_cum_unit_percent[1])} ({scales::comma(abc_coordinates$n[1])}) of\n{group_label} drive\n{scales::percent(abc_coordinates$threshold[1])} of {dim_label}"
+               ),
+           x = abc_coordinates$last_cum_unit_percent[1]+.05,
+           y = abc_coordinates$last_cum_unit_percent[1]+.05,
+           hjust=0)+
+  
+# B text ----------------------------------------------------------------------------
+  
+  annotate(geom="text",
+             label=
+             glue::glue(
+               "cumlative {scales::percent(abc_coordinates$last_cum_unit_percent[2])} of\n{group_label} drive\n{scales::percent(abc_coordinates$threshold[2])} of {dim_label}"
+               ),
+           hjust=0,
+           x =abc_coordinates$last_cum_unit_percent[2]+.05,
+           y=abc_coordinates$last_cum_unit_percent[2])+
+
+# C text ----------------------------------------------------------------------
+
+  annotate(geom="text", 
+             label=
+             glue::glue("remaining {scales::percent(abc_coordinates$threshold[3])} of\n{dim_label} driven by {scales::percent(1-(abc_coordinates$last_cum_unit_percent[1]+abc_coordinates$last_cum_unit_percent[2]))}\n({scales::comma(abc_coordinates$n[3])}) of {group_label}"),
+           hjust=0,
+           x =abc_coordinates$last_cum_unit_percent[3]-.3,
+           y=abc_coordinates$last_cum_unit_percent[3]-.25)+
+#format scales---------------------------------------------------------------------------------------------
+  scale_x_continuous(labels = scales::percent_format())+
+  scale_y_continuous(labels = scales::percent_format())
+}
+
+```
+\
+
+#distrubition chart
+function that takes positive /negative values and makes them both position so that it can be graphed
+means, median values of group 1 and overall values 
+
+
+#box plot
+simple box plot (perhaps facet_grid) by group 2
+
+#seasonality
+
+count of transactions in line chart by group 1
+
+##monthly seasonlity 
+fill chart by month
+
+## day of month seasonality
+fill chart by day of month
+
+
+## variation table
+
+#group 1 by group 2 or 3
+
+fill chart
+
+
+#new vs. returning customers
+
+```{r new-vs-returning}
+library(glue)
+
+new_vs_returning <- function(df,group,date,new_label,returning_label,date_unit){
+  
+  df %>%
+    group_by({{group}}) %>%
+    mutate(first_date=min({{ date}})) %>%
+    ungroup() %>% 
+    mutate(group_status=
+             case_when(
+               {{date}}> first_date ~ {{returning_label}},
+               {{date}}==first_date ~ {{new_label}},
+               TRUE ~ "other")
+           ) %>% 
+        
+    group_by(date_group=
+               lubridate::ceiling_date({{date}},unit={{date_unit}})
+             ) %>%
+    summarize(new=
+                n_distinct({{group}}[group_status=={{new_label}}]),
+              returning=
+                n_distinct({{group}}[group_status=={{returning_label}}]),
+            other=
+              n_distinct({{group}}[group_status=="other"])
+            ) %>% 
+  pivot_longer(cols = -c(date_group),names_to = "group_status")
+            
+    }
+  
+
+```
+
+
+#horizon ridge chart
+
+```{r ggrdiges-chart}
+
+test <- c("hello","ADFDA","123D")
+
+
+str_view(test,pattern="[1-9]*D")
+
+
+
+
+install.packages("ggridges")
+
+library(ggridges)
+
+contoso %>% count(margin_bucket,sort=T)
+
+contoso$margin_bucket <-cut_number(contoso$margin,6)
+
+contoso %>% 
+  ggplot()+
+  aes(x=horizon,y=margin_bucket,fill=..x..)+
+  ggridges::geom_density_ridges_gradient()+
+  MetBrewer::scale_fill_met_c("Cassatt2")
+
+MetBrewer::display_all()
+
+contoso$horizon <- as.numeric(contoso$due_date-contoso$order_date)
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+graph+
+  labs(title="overide")+
+  aes(size=n)
+
+
+
+
+
+
+  annotate(geom="text", # A text ---------
+           label=scales::percent(abc_coordinates$last_cum_unit_percent[1]),
+           x =abc_coordinates$last_cum_unit_percent[1]+.05,
+           y=A-.1)+
+  annotate(geom="text", # B text ----------
+           label=scales::percent(abc_coordinates$last_cum_unit_percent[2]),
+           x =abc_coordinates$last_cum_unit_percent[2]+.05,
+           y=A-.1)+
+  annotate(geom="text", # C text -------
+           label=scales::percent(1-(abc_coordinates$last_cum_unit_percent[1]+abc_coordinates$last_cum_unit_percent[2])),
+           x =abc_coordinates$last_cum_unit_percent[3]+.05,
+           y=A-.1)+
+
+
+
+
+
+
+
+customer_ABC_coordinates <- customer_ABC %>% 
+  group_by(customer_classification) %>% 
+  summarize(first_cum_per_of_total=first(cum_per_of_total),
+            last_cum_per_of_total=last(cum_per_of_total),
+            first_cum_unit_percent=first(cum_unit_percent),
+            last_cum_unit_percent=last(cum_unit_percent)
+            )
+
+customer_ABC %>% 
+  ggplot(aes(x=cum_unit_percent,y=cum_per_of_total))+
+  geom_point()+
+  geom_line()+
+  annotate(geom = "rect",
+           xmin = customer_ABC_coordinates$first_cum_unit_percent,
+           xmax = customer_ABC_coordinates$last_cum_unit_percent,
+           ymin = customer_ABC_coordinates$first_cum_per_of_total,
+           ymax= customer_ABC_coordinates$last_cum_per_of_total,
+           alpha=.3,
+           fill=c("dark green","yellow","red")
+           )+
+  geom_vline(xintercept = customer_ABC_coordinates$last_cum_unit_percent[1],
+             linetype="dashed",
+             col="dark green")+
+  annotate(geom="text",
+           label=scales::percent(customer_ABC_coordinates$last_cum_unit_percent[1]),
+           x =customer_ABC_coordinates$last_cum_unit_percent[1]+.05,
+           y=.7-.1)+
+  scale_x_continuous(labels = percent_format())+
+  scale_y_continuous(labels = percent_format())+
+  labs(x="cumlative percent of customers",
+       y="",
+       title=glue::glue("Cumlaitive margin percent by",{{"product_key"}},"customer rank")
+       )+
+  theme_classic()
+
+customer_ABC_coordinates
+```
+
+
+
+
+
+
+*how to checks to ensure total add up to one
+*how to ensure packages are there (require)
+*how to assign tables or graph to a list
+
+
+
+#build custom function
+
+
+```{r build-function}
+
+ABC <- function(dataset,by,group_by_label,dimension,dimension_label,A=.7,B=.2,C=.1,...){
+  
+  
+  #logic check to ensure values add up 1-----------
+  if((A+B+C)!=1){
+    stop("categories percentages must sum to 1"
+    )
+  }
+  else{
+    #group by dimension and create running totals---------
+  dataset_new <- dataset %>% 
+    group_by({{ by }}) %>% 
+    summarize(sum_dim=sum({{dimension}},na.rm=T),
+              mean_dim=mean({{dimension}},na.rm=T),
+              n=n()
+              ) %>% 
+    ungroup() %>% 
+    mutate(scale_mean_dim=scale(mean_dim,center = T,scale = T),
+           scale_by_dim=scale(n,center = TRUE,scale=TRUE)) %>% 
+    arrange(desc(sum_dim)) %>% # assuming positive values, descends highest to lowest
+    mutate(cum_sum=cumsum(sum_dim), #cumlative value, if ratio, need some sort of check
+         per_of_total=sum_dim/max(cum_sum), #assumes positive values, need check
+         cum_per_of_total=cumsum(per_of_total), #cumsum percent of total
+         cum_unit_percent=row_number()/max(row_number()), #unit percent
+         customer_classification=
+           case_when(
+           cum_per_of_total<=A ~"A",
+           cum_per_of_total<=(A+B) ~"B",
+           TRUE ~ "C")
+    )
+  }
+  
+
+#declare coordinates----------
+ABC_coordinates <-  dataset_new %>% 
+  group_by(customer_classification) %>% 
+  summarize(first_cum_per_of_total=first(cum_per_of_total),
+            last_cum_per_of_total=last(cum_per_of_total),
+            first_cum_unit_percent=first(cum_unit_percent),
+            last_cum_unit_percent=last(cum_unit_percent)
+            )
+
+#create labels--------
+
+
+#dimension_label
+
+if (missing(dimension_label)==TRUE){
+dimension_label <- dataset %>% select({{dimension}}) %>% colnames() %>% as.character()
+  
+}
+else{
+dimension_label <- enquo(dimension_label)
+}
+
+#group_by_label
+
+if (missing(group_by_label)==TRUE){
+  
+group_by_label <- dataset %>% select({{by}}) %>% colnames() %>% as.character()
+
+}
+
+else{
+
+  group_by_label <- enquo(group_by_label)
+}
+
+
+#create chart-------
+ dataset_new %>% 
+  ggplot(aes(x=cum_unit_percent,y=cum_per_of_total))+
+  geom_point()+
+  geom_line()+
+  annotate(geom = "rect",
+           xmin = ABC_coordinates$first_cum_unit_percent,
+           xmax = ABC_coordinates$last_cum_unit_percent,
+           ymin = ABC_coordinates$first_cum_per_of_total,
+           ymax= ABC_coordinates$last_cum_per_of_total,
+           alpha=.3,
+           fill=c("dark green","yellow","red")
+           )+
+  geom_vline(xintercept = ABC_coordinates$last_cum_unit_percent[1], #A dotted line---
+             linetype="dashed",
+             col="dark green")+
+  geom_vline(xintercept = ABC_coordinates$last_cum_unit_percent[2], #B dotted line----
+             linetype="dashed",
+             col="yellow")+
+  geom_vline(xintercept = ABC_coordinates$last_cum_unit_percent[3], # C dotted line----
+             linetype="dashed",
+             col="red")+
+  annotate(geom="text", # A text ---------
+           label=scales::percent(ABC_coordinates$last_cum_unit_percent[1]),
+           x =ABC_coordinates$last_cum_unit_percent[1]+.05,
+           y=A-.1)+
+  annotate(geom="text", # B text ----------
+           label=scales::percent(ABC_coordinates$last_cum_unit_percent[2]),
+           x =ABC_coordinates$last_cum_unit_percent[2]+.05,
+           y=A-.1)+
+  annotate(geom="text", # C text -------
+           label=scales::percent(1-(ABC_coordinates$last_cum_unit_percent[1]+ABC_coordinates$last_cum_unit_percent[2])),
+           x =ABC_coordinates$last_cum_unit_percent[3]+.05,
+           y=A-.1)+
+  scale_x_continuous(labels = percent_format())+
+  scale_y_continuous(labels = percent_format())+
+  labs(x=glue::glue("cumlative percent of ",quo_name(group_by_label)),
+       y="",
+       title=glue::glue(quo_name(group_by_label)," rank by cumlative ",quo_name(dimension_label))
+       )+
+  theme_classic()
+}
+
+ABC(dataset = contoso,by=customer_key,group_by_label = customer,dimension = margin,A=.7,B=.25,C=.05)
+
+.7+.25+.05
+
+
+```
+
+```{r count_plus}
+
+
+count_plus <- function(.data,.var,.dim){
+
+#summaries-------
+.data %>% group_by({{.var}}) %>% 
+  summarize(n=n(),
+            across({{.dim}},median,.names="{.fn}_{.col}"),
+            median_var=median(quantity,na.rm = TRUE ),
+            mean_var=mean(quantity,na.rm = TRUE),
+            sd_var=sd(quantity,na.rm = TRUE),
+            mad_var=mad(quantity,
+                        center=median(quantity),
+                        na.rm = TRUE),
+            lad_var=mad(quantity,
+                        center=mean(quantity,na.rm = TRUE)),
+            min_var=min(quantity,na.rm = TRUE),
+            max_var=max(quantity,na.rm = TRUE),
+            per_75_var=quantile(quantity,.75,na.rm = TRUE),
+            per_25_var=quantile(quantity,.75,),
+            mode_var=mode(quantity)
+  )
+}
+?across()
+
+
+count_plus(.data=contoso,.var=customer_key,.dim=quantity)
+
+
+#can apply list(.fn1,.fn2,.fn3)
+
+
+my_summarise <- function(data, group_var) {
+  data %>%
+    group_by({{ group_var }}) %>%
+    summarise(mean = mean(mass))
+}
+starwars %>% names()
+
+starwars %>% my_summarise(name)
+
+contoso %>% colnames()
+
+count
+
+
+
+a <- c(28,30,31)
+sum(a)/3
+mean(a)
+```
+
+
+
+
+1. decide if you have discrete or continuious
+2. decide if you want consistency or theme or indifferent
+
+create matrix
+
+1. continous
+2. discrete
+less than 5
+more than 5
+more than 10
+prgamtically
+
+
+viridis
+rcolorbrewer
+hue_pal
+grey sclae_
+
+
+show color: show_col()
+
+color scheme that are gradient and unlimited in number and can be cusotmized
+hue_pal
+
+color schemes that are predefined and gradient
+
+
+color schemes that are discrete and limited in numbers that can be customized
+
+
+color schemes that are discrete and standalone
+
+how to design your own color scheme
+
+how to rearrange colors?
+how to assign colors to factors
+
+
+
+
+time_intelligence <- function(df=datatable,
+                              dimension= the dimension to controlfor,
+                              metric=the measurement metric,
+                              calendar_type=standard or non standard,
+                              date_column=which column has the dates associated wth values,
+                              period= ,
+                              period_match,shift,aggregation,comparison){
+  
+  
+  
+  DF %>% 
+  date_time() %>% 
+  -calendar_type,
+  -date_column,
+  
+  period() %>% 
+  shift() %>% 
+  aggregation() %>% 
+  -metric
+  -weights options
+  -mark
+  -additive
+  for totals this will either let you add a total across or will do a different weight
+  -granualarity
+  For example, if you have monthly values, and someone asks for the monthly average do you take each period and equally weight them? or do you take the daily average balance and multiply it by monthly period average days in each month eg. 28,31,30
+  -
+  comparison() %>% 
+  -compare to what?
+  -what to do if unequal measurement lengths
+
+
+
