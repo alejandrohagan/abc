@@ -1,73 +1,66 @@
 pacman::p_load(tidyverse,roxygen2)
 
 
-#this is a test
-#and this is a test from github
-## another test
-## this is the final test to see if I can get this to work 8:13 am
-#` creates a customer segmentation
-#`
-#` @param df is a dataframe or tibble
-#` @param group is the grouping key that you want to aggregate the data by, eg customer, plant, product
-#` @param dim is the dimension you want to measure, eg. quantity, margin, etc. This should not be a ratio and should be a positive number
-#` @param a is the initial threshold for aggregation and should be expressed as a percentage
-#` @param b is the incremental threshold for aggregation and should be expressed as a percentage
-#` @param c is the incremental threshold for aggregation and should be expressed as a percentage
-#` @export
 
-customer_segmentation <- function(df,group,dim,a=.7,b=.26,c=.04){
+
+abc <- function(df,group,dim,a=.7,b=.26,c=.04,na.rm=TRUE){
   
 
+#error check to ensure a,b,c sum up to one and that dim is numeric
   
-  stopifnot(a+b+c==1L,!is.numeric(dim_name))
+##declare variable outside of stopfunction for context transition
+dim_check <- df %>% pull({{dim}})
   
+stopifnot("a,b,c must sum to 1, please try again"=a+b+c==1,
+          "dim must be numeric"=is.numeric(dim_check),
+          "please change dim to positive value"= sum(dim_check)>0)
   
+df %>% #passes the dataframe through
   
-  df %>% #dataframe
-    group_by({{group}}) %>% 
+    group_by({{group}}) %>% #group's the dataframe by the input gruop column
     
     #creates a bunch of columns
-    summarize(  
-      across({{ dim }}, #make sure this dimension can be aggregratad, later version will handle ratios
-             list(sum=~sum(.,na.rm=TRUE),
-                  mean=~mean(.,na.rm=TRUE),
+    summarize(
+      across({{ dim }}, #make sure this dimension can be aggregated, later version will handle ratios
+             list(sum=~sum(.,na.rm=na.rm),
+                  mean=~mean(.,na.rm=na.rm),
                   n =  ~ n(),
-                  median =  ~ median(.,na.rm=TRUE),
-                  sd =  ~ sd(.,na.rm=TRUE),
-                  mad =  ~ mad(.,na.rm=TRUE), #median absolute deviation
-                  aad =  ~ mad(., center =mean(.,na.rm=TRUE),na.rm=TRUE), #average absolute deviation
-                  IQR05 = ~quantile(., .05,na.rm=TRUE),
-                  IQR25 = ~quantile(., .25,na.rm=TRUE),
-                  IQR75 = ~quantile(., .75,na.rm=TRUE),
-                  IQR95 = ~quantile(., .95,na.rm=TRUE)
+                  sd =  ~ sd(.,na.rm=na.rm),
+                  mad =  ~ mad(.,na.rm=na.rm), #median absolute deviation
+                  aad =  ~ mad(., center =mean(.,na.rm=na.rm),na.rm=na.rm), #average absolute deviation
+                  IQR05 = ~quantile(., .05,na.rm=na.rm),
+                  IQR25 = ~quantile(., .25,na.rm=na.rm),
+                  median =  ~ median(.,na.rm=na.rm),
+                  IQR75 = ~quantile(., .75,na.rm=na.rm),
+                  IQR95 = ~quantile(., .95,na.rm=na.rm)
              ),
              .names = "{.fn}") #gives each column their name
     ) %>%
     ungroup() %>% 
-    
-    arrange(desc(sum)) %>% # assuming positive values, descends highest to lowest (should add some logic to switch this)
-    
+  
+    arrange(desc(sum)) %>% # assuming positive values, descends highest to lowest
+  
     mutate(cum_sum=cumsum(sum), #cumlative value, if ratio, need some sort of check - need specify
+           
            prop_total=sum/max(cum_sum), #assumes positive values, need check
+           
            cum_prop_total=cumsum(prop_total), #cumsum percent of total
+           
            cum_unit_prop=row_number()/max(row_number()), #unit percent
-           group_classification_by_dim=
+           
+           group_classification_by_dim= #classify the cumlative percent by threshold
              case_when(
                cum_prop_total<=a ~"A",
                cum_prop_total<=(a+b) ~"B",
-               TRUE ~ "C"),
-           dim_threshold=
+               na.rm ~ "C"),
+           dim_threshold= #adds a column of the thresholds
              case_when(group_classification_by_dim=="A"~a,
                        group_classification_by_dim=="B"~(a+b),
-                       TRUE ~ c)
+                       na.rm ~ c)
     ) %>% 
-    select(-c(prop_total,cum_sum)) %>% 
-    relocate(dim_threshold,group_classification_by_dim,cum_prop_total,cum_unit_prop)
+    select(-c(prop_total,cum_sum)) %>%  #removes unused columns
+    relocate(dim_threshold,group_classification_by_dim,cum_prop_total,cum_unit_prop) #orders columns
   
 }
 
-diamonds %>% customer_segmentation(group = clarity,dim=x)
 
-roxygenise()
-
-usethis::use_git_config(user.name = "alejandrohagan",user.email = "alejandro.hagan@exxonmobil.com")

@@ -8,6 +8,7 @@ knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(tidyverse,roxygen2,scales,glue,dtplyr)
 theme_set(theme(axis.text = element_text(color="black")))
 install.packages("reprex")
+install.packages("janitor")
 library(reprex)
 
 ```
@@ -25,6 +26,8 @@ contoso <- contoso %>%
            net_sale_amount=quantity*net_price,
            cost_amount=quantity*unit_cost,
            margin=net_sale_amount-cost_amount)
+
+
 ```
 
 
